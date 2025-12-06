@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+model User {
+  id        String  @id @default(uuid())
+  name      String
+  email     String  @unique
+  phone     String?
+  role      Role
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Class {
+  id        String   @id @default(uuid())
+  name      String   // JSS1, JSS2, ..., SS3
+  level     String?  // optional
+  createdAt DateTime @default(now())
+
+  subjects  Subject[]
+  students  Student[]
+}
+
+model Subject {
+  id        String   @id @default(uuid())
+  name      String
+  classId   String
+  teacherId String?
+
+  class     Class    @relation(fields: [classId], references: [id])
+  teacher   Teacher? @relation(fields: [teacherId], references: [id])
+  results   Result[]
+}
+
+model Student {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  classId   String
+  admNo     String   @unique
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  class     Class    @relation(fields: [classId], references: [id])
+  results   Result[]
+  parents   Parent[]
+}
+
+model Teacher {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  subjects  Subject[]
+}
+
+model Parent {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  wards     Student[]
+}
+
+model Result {
+  id         String   @id @default(uuid())
+  studentId  String
+  subjectId  String
+  term       String   // e.g., "2024/2025 - 1st Term"
+  caScore    Int      // continuous assessment
+  examScore  Int
+  total      Int
+  grade      String   // A - F
+  remark     String?
+  createdAt  DateTime @default(now())
+
+  student    Student  @relation(fields: [studentId], references: [id])
+  subject    Subject  @relation(fields: [subjectId], references: [id])
+
+  @@unique([studentId, subjectId, term])
+}
+
+model Conversation {
+  id        String    @id @default(uuid())
+  title     String?
+  createdAt DateTime  @default(now())
+  messages  Message[]
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String
+  senderId        String?
+  body            String
+  via             String   @default("portal") // portal/termii_whatsapp/termii_sms
+  status          String   @default("sent")   // sent/delivered/read
+  createdAt       DateTime @default(now())
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id])
+}
